@@ -116,6 +116,18 @@ st.markdown("""
         .metric-box {
             padding: 10px 15px;
         }
+        .metric-title {
+            font-size: 0.95rem !important;
+        }
+        .metric-val {
+            font-size: 1.6rem !important;
+        }
+    }
+    .metric-title {
+        color: #7F8C8D; font-size: 1.1rem; font-weight: 600; word-wrap: break-word; white-space: normal;
+    }
+    .metric-val {
+        font-size: 2.2rem; font-weight: 800; color: #2C3E50; margin-top: 5px; word-wrap: break-word; white-space: normal;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -352,7 +364,7 @@ def render_overview():
         styled_df = display_df.style.set_properties(**{'text-align': 'right', 'font-weight': 'bold'})
         styled_df = styled_df.set_table_styles([dict(selector='th', props=[('text-align', 'center')])])
         
-        st.table(styled_df)
+        st.dataframe(styled_df, use_container_width=True)
 
 
 
@@ -385,20 +397,20 @@ def render_stocks():
     st.markdown(f"""
     <div class="metrics-container">
         <div class="metric-box">
-            <div style="color: #7F8C8D; font-size: 1.1rem; font-weight: 600;">주식 평가 합계 (P열)</div>
-            <div style="font-size: 2.2rem; font-weight: 800; color: #2C3E50; margin-top: 5px;">₩{total_val:,.0f}</div>
+            <div class="metric-title">주식 평가 합계 (P열)</div>
+            <div class="metric-val">₩{total_val:,.0f}</div>
         </div>
         <div class="metric-box">
-            <div style="color: #7F8C8D; font-size: 1.1rem; font-weight: 600;">매수총액 (I열)</div>
-            <div style="font-size: 2.2rem; font-weight: 800; color: #2C3E50; margin-top: 5px;">₩{total_buy:,.0f}</div>
+            <div class="metric-title">매수총액 (I열)</div>
+            <div class="metric-val">₩{total_buy:,.0f}</div>
         </div>
         <div class="metric-box">
-            <div style="color: #7F8C8D; font-size: 1.1rem; font-weight: 600;">수익현황 합계 (T열)</div>
-            <div style="font-size: 2.2rem; font-weight: 800; color: {p_color}; margin-top: 5px;">₩{total_profit:,.0f} <span style="font-size: 1.2rem;">({profit_pct:+.2f}%)</span></div>
+            <div class="metric-title">수익현황 합계 (T열)</div>
+            <div class="metric-val" style="color: {p_color};">₩{total_profit:,.0f} <span style="font-size: 0.6em;">({profit_pct:+.2f}%)</span></div>
         </div>
         <div class="metric-box">
-            <div style="color: #7F8C8D; font-size: 1.1rem; font-weight: 600;">전일대비 (Z열)</div>
-            <div style="font-size: 2.2rem; font-weight: 800; color: {d_color}; margin-top: 5px;">₩{total_day_change:,.0f} <span style="font-size: 1.2rem;">({day_change_pct:+.2f}%)</span></div>
+            <div class="metric-title">전일대비 (Z열)</div>
+            <div class="metric-val" style="color: {d_color};">₩{total_day_change:,.0f} <span style="font-size: 0.6em;">({day_change_pct:+.2f}%)</span></div>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -487,7 +499,7 @@ def render_stocks():
     styled_df = styled_df.set_properties(**{'text-align': 'right', 'font-weight': 'bold'})
     styled_df = styled_df.set_table_styles([dict(selector='th', props=[('text-align', 'center')])])
             
-    st.table(styled_df)
+    st.dataframe(styled_df, use_container_width=True)
 
 
 def render_dividends():
@@ -585,7 +597,7 @@ def render_dividends():
         )
         styled_df = styled_df.set_table_styles([dict(selector='th', props=[('text-align', 'center')])])
         
-        st.table(styled_df)
+        st.dataframe(styled_df, use_container_width=True)
     else:
         # Fallback table if '종목명' isn't available
         yearly_table = yearly_trend.copy().sort_values(by='Year', ascending=False)
@@ -595,7 +607,7 @@ def render_dividends():
             **{'text-align': 'right', 'font-weight': 'bold'}
         ).set_table_styles([dict(selector='th', props=[('text-align', 'center')])])
         
-        st.table(styled_df)
+        st.dataframe(styled_df, use_container_width=True)
 
 # ==========================================
 # 5. 메인 실행 로직
