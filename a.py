@@ -63,6 +63,60 @@ st.markdown("""
     [data-testid="stTable"] td {
         text-align: right !important;
     }
+
+    /* === Mobile Optimizations === */
+    .metrics-container {
+        display: flex; 
+        gap: 15px; 
+        margin-bottom: 25px;
+    }
+    .metric-box {
+        flex: 1; 
+        padding: 15px 20px; 
+        border-radius: 12px; 
+        border: 1px solid #E0E0E0; 
+        background-color: #FFFFFF; 
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    }
+    .total-assets-container {
+        background-color: #FFFFFF; 
+        padding: 25px; 
+        border-radius: 15px; 
+        border: 1px solid #E0E0E0; 
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05); 
+        margin-bottom: 25px; 
+        text-align: center;
+    }
+    .total-assets-title {
+        margin: 0; 
+        font-size: 1.1rem; 
+        color: #7F8C8D;
+    }
+    .total-assets-value {
+        margin: 0; 
+        font-size: 3.5rem; 
+        color: #2C3E50; 
+        border: none;
+    }
+    
+    @media (max-width: 768px) {
+        .metrics-container {
+            flex-direction: column !important;
+            gap: 10px !important;
+        }
+        .total-assets-container {
+            padding: 15px;
+        }
+        .total-assets-value {
+            font-size: 2.2rem !important;
+        }
+        [data-testid="stMetricValue"] {
+            font-size: 1.8rem !important;
+        }
+        .metric-box {
+            padding: 10px 15px;
+        }
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -237,9 +291,9 @@ def render_overview():
     
     # --- Top Banner for Total Assets (Light Mode) ---
     st.markdown(f"""
-    <div style="background-color: #FFFFFF; padding: 25px; border-radius: 15px; border: 1px solid #E0E0E0; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 25px; text-align: center;">
-        <p style="margin: 0; font-size: 1.1rem; color: #7F8C8D;">총 합산 순자산 (실시간 시세)</p>
-        <h1 style="margin: 0; font-size: 3.5rem; color: #2C3E50; border: none;">₩{total_assets:,.0f}</h1>
+    <div class="total-assets-container">
+        <p class="total-assets-title">총 합산 순자산 (실시간 시세)</p>
+        <h1 class="total-assets-value">₩{total_assets:,.0f}</h1>
     </div>
     """, unsafe_allow_html=True)
 
@@ -329,20 +383,20 @@ def render_stocks():
     d_color = get_color(total_day_change)
 
     st.markdown(f"""
-    <div style="display: flex; gap: 15px; margin-bottom: 25px;">
-        <div style="flex: 1; padding: 15px 20px; border-radius: 12px; border: 1px solid #E0E0E0; background-color: #FFFFFF; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+    <div class="metrics-container">
+        <div class="metric-box">
             <div style="color: #7F8C8D; font-size: 1.1rem; font-weight: 600;">주식 평가 합계 (P열)</div>
             <div style="font-size: 2.2rem; font-weight: 800; color: #2C3E50; margin-top: 5px;">₩{total_val:,.0f}</div>
         </div>
-        <div style="flex: 1; padding: 15px 20px; border-radius: 12px; border: 1px solid #E0E0E0; background-color: #FFFFFF; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+        <div class="metric-box">
             <div style="color: #7F8C8D; font-size: 1.1rem; font-weight: 600;">매수총액 (I열)</div>
             <div style="font-size: 2.2rem; font-weight: 800; color: #2C3E50; margin-top: 5px;">₩{total_buy:,.0f}</div>
         </div>
-        <div style="flex: 1; padding: 15px 20px; border-radius: 12px; border: 1px solid #E0E0E0; background-color: #FFFFFF; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+        <div class="metric-box">
             <div style="color: #7F8C8D; font-size: 1.1rem; font-weight: 600;">수익현황 합계 (T열)</div>
             <div style="font-size: 2.2rem; font-weight: 800; color: {p_color}; margin-top: 5px;">₩{total_profit:,.0f} <span style="font-size: 1.2rem;">({profit_pct:+.2f}%)</span></div>
         </div>
-        <div style="flex: 1; padding: 15px 20px; border-radius: 12px; border: 1px solid #E0E0E0; background-color: #FFFFFF; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+        <div class="metric-box">
             <div style="color: #7F8C8D; font-size: 1.1rem; font-weight: 600;">전일대비 (Z열)</div>
             <div style="font-size: 2.2rem; font-weight: 800; color: {d_color}; margin-top: 5px;">₩{total_day_change:,.0f} <span style="font-size: 1.2rem;">({day_change_pct:+.2f}%)</span></div>
         </div>
@@ -362,7 +416,7 @@ def render_stocks():
         color=alt.Color(field="종목명", type="nominal",
                        sort=alt.EncodingSortField(field="평가총액_원", op="sum", order="descending"),
                        scale=alt.Scale(scheme='tableau20'),
-                       legend=alt.Legend(orient='right', title='종목명')),
+                       legend=alt.Legend(orient='bottom', title='종목명')),
         tooltip=[alt.Tooltip('종목명'), alt.Tooltip('평가총액_원', format=',.0f'), alt.Tooltip('비중:Q', format='.2%', title='비중')]
     )
     
