@@ -118,8 +118,8 @@ if df is not None:
         .metric-card {{ background: #fff; border: 1px solid rgba(0,0,0,0.05); border-radius: 16px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); }}
         .metric-label {{ font-size: 13px; color: #888780; margin-bottom: 8px; font-weight: 500; }}
         .metric-value {{ font-size: 20px; font-weight: 700; letter-spacing: -0.5px; }}
-        .up {{ color: #D85A30 !important; }}
-        .down {{ color: #3266AD !important; }}
+        .up {{ color: #FF5252 !important; font-weight: 700 !important; }}
+        .down {{ color: #448AFF !important; font-weight: 700 !important; }}
         .flat {{ color: #888780 !important; }}
         .card {{ background: #fff; border: 1px solid rgba(0,0,0,0.08); border-radius: 20px; padding: 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.04); margin-bottom: 24px; }}
         .card-title {{ font-size: 17px; font-weight: 700; margin-bottom: 20px; }}
