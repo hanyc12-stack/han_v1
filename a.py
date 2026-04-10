@@ -184,7 +184,7 @@ if df is not None:
           <table class="stock-table">
             <thead><tr><th style="text-align:left;">종목명</th><th>비중</th><th>현재가</th><th>평단가</th><th>주당전일비</th><th>금액전일비</th><th>수익금(수익률)</th></tr></thead>
             <tbody>
-              {''.join([f"<tr><td>{r['Name']}</td><td>{r['Weight']}</td><td>{format_price(r['CurPrice'])}</td><td>{format_price(r['AvgPrice'])}</td><td class='{get_color_class(r['Diff'])}'>{format_price(r['Diff'])}</td><td class='{get_color_class(r['TotalDiff'])}'>{format_price(r['TotalDiff'])}</td><td><span class='badge {get_color_class(r['Profit'])}'>{format_price(r['Profit'])} ({r['Rate']})</span></td></tr>" for _, r in stocks.iterrows()])}
+              {''.join([f"<tr><td>{r['Name']}</td><td>{r['Weight']}</td><td>{format_price(r['CurPrice'])}</td><td>{format_price(r['AvgPrice'])}</td><td><span class='badge {get_color_class(r['Diff'])}'>{format_price(r['Diff'])}</span></td><td><span class='badge {get_color_class(r['TotalDiff'])}'>{format_price(r['TotalDiff'])}</span></td><td><span class='badge {get_color_class(r['Profit'])}'>{format_price(r['Profit'])} ({r['Rate']})</span></td></tr>" for _, r in stocks.iterrows()])}
             </tbody>
           </table>
         </div>
