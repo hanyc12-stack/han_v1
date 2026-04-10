@@ -146,9 +146,10 @@ if df is not None:
         }}
         .stock-table th:first-child {{ z-index: 3; }}
 
-        .badge {{ display: inline-block; font-size: 10.5px; padding: 3px 8px; border-radius: 6px; font-weight: 700; }}
-        .badge.up {{ background: #FAECE7; color: #D85A30; }}
-        .badge.down {{ background: #E7F0FA; color: #3266AD; }}
+        .st-badge {{ display: inline-block; font-size: 10.5px; padding: 3px 8px; border-radius: 6px; font-weight: 700 !important; }}
+        .st-badge.up {{ background: #FAECE7 !important; color: #FF5252 !important; }}
+        .st-badge.down {{ background: #E7F0FA !important; color: #448AFF !important; }}
+        .st-badge.flat {{ background: #F0F0F0 !important; color: #888780 !important; }}
 
         /* 모바일 최적화 */
         @media (max-width: 600px) {{
@@ -160,7 +161,7 @@ if df is not None:
             .card {{ padding: 12px; border-radius: 12px; }}
             .stock-table {{ font-size: 11.5px; }}
             .stock-table th, .stock-table td {{ padding: 8px 4px; }}
-            .badge {{ font-size: 10px; padding: 2px 6px; }}
+            .st-badge {{ font-size: 10px; padding: 2px 6px; }}
         }}
     </style>
     
@@ -184,7 +185,7 @@ if df is not None:
           <table class="stock-table">
             <thead><tr><th style="text-align:left;">종목명</th><th>비중</th><th>현재가</th><th>평단가</th><th>주당전일비</th><th>금액전일비</th><th>수익금(수익률)</th></tr></thead>
             <tbody>
-              {''.join([f"<tr><td>{r['Name']}</td><td>{r['Weight']}</td><td>{format_price(r['CurPrice'])}</td><td>{format_price(r['AvgPrice'])}</td><td><span class='badge {get_color_class(r['Diff'])}'>{format_price(r['Diff'])}</span></td><td><span class='badge {get_color_class(r['TotalDiff'])}'>{format_price(r['TotalDiff'])}</span></td><td><span class='badge {get_color_class(r['Profit'])}'>{format_price(r['Profit'])} ({r['Rate']})</span></td></tr>" for _, r in stocks.iterrows()])}
+              {''.join([f"<tr><td>{r['Name']}</td><td>{r['Weight']}</td><td>{format_price(r['CurPrice'])}</td><td>{format_price(r['AvgPrice'])}</td><td><span class='st-badge {get_color_class(r['Diff'])}'>{format_price(r['Diff'])}</span></td><td><span class='st-badge {get_color_class(r['TotalDiff'])}'>{format_price(r['TotalDiff'])}</span></td><td><span class='st-badge {get_color_class(r['Profit'])}'>{format_price(r['Profit'])} ({r['Rate']})</span></td></tr>" for _, r in stocks.iterrows()])}
             </tbody>
           </table>
         </div>
