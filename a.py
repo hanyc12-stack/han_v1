@@ -50,74 +50,90 @@ CUSTOM_CSS = """
     @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700&display=swap');
 
     * { font-family: 'Pretendard', sans-serif; }
+    .stApp { background-color: #f2f2f7; }
 
-    .stApp { background-color: #f8f9fa; }
+    /* 메인 컨테이너 패딩 조절 */
+    .block-container { padding-top: 2rem; padding-bottom: 2rem; }
 
     /* 카드 컨테이너 */
     .card {
         background: white;
-        padding: 20px;
-        border-radius: 15px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-        margin-bottom: 20px;
-        border: 1px solid #eee;
+        padding: 24px;
+        border-radius: 20px;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.04);
+        margin-bottom: 24px;
+        border: 1px solid rgba(0,0,0,0.05);
     }
 
     /* 섹션 타이틀 */
     .search-title {
-        font-size: 20px;
+        font-size: 22px;
         font-weight: 700;
-        color: #1d1d1f;
-        margin-bottom: 15px;
+        color: #1c1c1e;
+        margin-bottom: 18px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
     }
 
     /* 뉴스 아이템 */
     .news-item {
-        padding: 10px 0;
+        padding: 12px 0;
         border-bottom: 1px solid #f2f2f7;
     }
     .news-link {
         text-decoration: none;
         color: #007aff !important;
         font-weight: 600;
-        font-size: 14px;
+        font-size: 15px;
+        line-height: 1.5;
+    }
+    .news-meta {
+        font-size: 12px;
+        color: #8a8a8e;
+        margin-top: 4px;
+        display: block;
     }
 
     /* 지표 박스 */
     .metric-box {
         background: #f9f9fb;
-        padding: 12px;
-        border-radius: 12px;
+        padding: 16px;
+        border-radius: 16px;
         text-align: center;
         border: 1px solid #efeff4;
+        transition: transform 0.2s;
     }
+    .metric-box:hover { transform: translateY(-2px); }
     .metric-label {
-        font-size: 11px;
+        font-size: 12px;
         color: #8a8a8e;
-        margin-bottom: 4px;
+        margin-bottom: 6px;
+        font-weight: 500;
     }
     .metric-value {
-        font-size: 15px;
+        font-size: 18px;
         font-weight: 700;
         color: #1c1c1e;
     }
 
-    /* 종목 버튼 */
-    .stock-btn {
-        background: none !important;
-        border: none !important;
-        padding: 0 !important;
-        color: #007aff !important;
-        text-decoration: underline !important;
-        cursor: pointer;
+    /* 버튼 스타일 커스텀 */
+    .stButton>button {
+        border-radius: 12px;
         font-weight: 600;
-        font-size: 14px;
+        border: none;
+        transition: all 0.2s;
     }
 
-    /* 모바일 대응 */
+    /* 모바일 대응 (600px 이하) */
     @media (max-width: 600px) {
-        .card { padding: 15px; }
+        .card { padding: 16px; border-radius: 16px; }
         .search-title { font-size: 18px; }
+        .metric-value { font-size: 15px; }
+        .metric-box { padding: 10px; }
+        .news-link { font-size: 13px; }
+        [data-testid="stHorizontalBlock"] { gap: 8px !important; }
+        .stMarkdown div p { font-size: 13px; }
     }
 </style>
 """
@@ -370,14 +386,15 @@ def _create_integrated_chart(df: pd.DataFrame, inv_df: pd.DataFrame = None) -> g
     # 레이아웃 설정
     fig.update_layout(
         template="plotly_white",
-        height=1000,
+        height=850, # PC/모바일 적정 높이로 조절
         showlegend=False,
-        margin=dict(l=10, r=10, t=50, b=10),
+        margin=dict(l=5, r=5, t=40, b=5),
         hovermode="x unified",
-        xaxis_rangeslider_visible=False
+        xaxis_rangeslider_visible=False,
+        font=dict(size=10) # 전체 폰트 크기 축소
     )
-    fig.update_xaxes(showgrid=False)
-    fig.update_yaxes(showgrid=True, gridcolor="#f0f0f0")
+    fig.update_xaxes(showgrid=False, tickfont=dict(size=9))
+    fig.update_yaxes(showgrid=True, gridcolor="#f0f0f0", tickfont=dict(size=9))
     
     return fig
 
@@ -527,9 +544,7 @@ def _render_news_item(title: str, link: str, source: str) -> str:
     return (
         f'<div class="news-item">'
         f'  <a href="{link}" target="_blank" class="news-link">● {title}</a>'
-        f'  <span style="font-size:11px; color:#8a8a8e; margin-left:8px;">'
-        f'    {source}'
-        f'  </span>'
+        f'  <span class="news-meta">{source}</span>'
         f'</div>'
     )
 
