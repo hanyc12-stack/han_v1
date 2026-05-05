@@ -304,101 +304,81 @@ CHART_LAYOUT = dict(
 )
 
 
-def _create_macd_chart(df: pd.DataFrame) -> go.Figure:
-    """MACD 차트를 생성합니다."""
-    df = _calc_macd(df.copy())
+# ============================================================
+# 4. 통합 차트 생성 (Plotly Subplots)
+# ============================================================
 
-    fig = go.Figure()
+def _create_integrated_chart(df: pd.DataFrame, inv_df: pd.DataFrame = None) -> go.Figure:
+    """주가(캔들), 이동평균선, 거래량, MACD, RSI, 수급 데이터를 하나의 차트로 생성합니다."""
+    # 데이터 준비
+    df = df.copy()
+    df['MA5'] = df['Close'].rolling(window=5).mean()
+    df['MA20'] = df['Close'].rolling(window=20).mean()
+    df['MA60'] = df['Close'].rolling(window=60).mean()
+    df['MA120'] = df['Close'].rolling(window=120).mean()
+    df = _calc_macd(df)
+    df = _calc_rsi(df)
 
-    # Histogram (bar)
-    colors = ["#ef4444" if v < 0 else "#22c55e" for v in df["Histogram"]]
-    fig.add_trace(go.Bar(
-        x=df.index, y=df["Histogram"],
-        marker_color=colors, name="Histogram",
-        opacity=0.5,
-    ))
+    # 서브플롯 설정 (행 수 결정)
+    rows = 4
+    row_heights = [0.4, 0.15, 0.15, 0.15]
+    titles = ["주가 및 이동평균선", "거래량", "MACD", "RSI"]
+    
+    if inv_df is not None and not inv_df.empty:
+        rows = 5
+        row_heights = [0.35, 0.12, 0.12, 0.12, 0.15]
+        titles.append("외국인·기관 순매수")
 
-    # MACD line
-    fig.add_trace(go.Scatter(
-        x=df.index, y=df["MACD"],
-        line=dict(color="#3b82f6", width=1.5),
-        name="MACD",
-    ))
+    fig = make_subplots(
+        rows=rows, cols=1,
+        shared_xaxes=True,
+        vertical_spacing=0.03,
+        subplot_titles=titles,
+        row_heights=row_heights
+    )
 
-    # Signal line
-    fig.add_trace(go.Scatter(
-        x=df.index, y=df["Signal"],
-        line=dict(color="#f97316", width=1.5),
-        name="Signal",
-    ))
+    # 1. 주가 캔들스틱 및 이평선
+    fig.add_trace(go.Candlestick(
+        x=df.index, open=df['Open'], high=df['High'], low=df['Low'], close=df['Close'],
+        name="주가", increasing_line_color='#ef4444', decreasing_line_color='#3b82f6'
+    ), row=1, col=1)
+    
+    for ma, color in zip(['MA5', 'MA20', 'MA60', 'MA120'], ['#f59e0b', '#10b981', '#3b82f6', '#8b5cf6']):
+        fig.add_trace(go.Scatter(x=df.index, y=df[ma], name=ma, line=dict(width=1, color=color)), row=1, col=1)
 
-    fig.update_layout(**CHART_LAYOUT, title="MACD", height=250)
+    # 2. 거래량
+    vol_colors = ['#ef4444' if c >= 0 else '#3b82f6' for c in df['Close'].diff().fillna(0)]
+    fig.add_trace(go.Bar(x=df.index, y=df['Volume'], name="거래량", marker_color=vol_colors, opacity=0.7), row=2, col=1)
+
+    # 3. MACD
+    macd_colors = ["#ef4444" if v >= 0 else "#3b82f6" for v in df["Histogram"]]
+    fig.add_trace(go.Bar(x=df.index, y=df["Histogram"], name="MACD Hist", marker_color=macd_colors, opacity=0.5), row=3, col=1)
+    fig.add_trace(go.Scatter(x=df.index, y=df["MACD"], name="MACD", line=dict(color="#3b82f6", width=1.5)), row=3, col=1)
+    fig.add_trace(go.Scatter(x=df.index, y=df["Signal"], name="Signal", line=dict(color="#f97316", width=1.5)), row=3, col=1)
+
+    # 4. RSI
+    fig.add_trace(go.Scatter(x=df.index, y=df["RSI"], name="RSI", line=dict(color="#8b5cf6", width=1.5), fill="tozeroy", fillcolor="rgba(139,92,246,0.05)"), row=4, col=1)
+    fig.add_hline(y=70, line_dash="dash", line_color="#ef4444", opacity=0.3, row=4, col=1)
+    fig.add_hline(y=30, line_dash="dash", line_color="#22c55e", opacity=0.3, row=4, col=1)
+
+    # 5. 수급 (있을 경우)
+    if rows == 5:
+        inv_df = inv_df.set_index('Date').reindex(df.index).fillna(0)
+        fig.add_trace(go.Bar(x=inv_df.index, y=inv_df["외국인순매수"], name="외국인", marker_color="rgba(59,130,246,0.7)"), row=5, col=1)
+        fig.add_trace(go.Bar(x=inv_df.index, y=inv_df["기관순매수"], name="기관", marker_color="rgba(249,115,22,0.7)"), row=5, col=1)
+
+    # 레이아웃 설정
+    fig.update_layout(
+        template="plotly_white",
+        height=1000,
+        showlegend=False,
+        margin=dict(l=10, r=10, t=50, b=10),
+        hovermode="x unified",
+        xaxis_rangeslider_visible=False
+    )
     fig.update_xaxes(showgrid=False)
-    return fig
-
-
-def _create_rsi_chart(df: pd.DataFrame) -> go.Figure:
-    """RSI 차트를 생성합니다."""
-    df = _calc_rsi(df.copy())
-
-    fig = go.Figure()
-
-    fig.add_trace(go.Scatter(
-        x=df.index, y=df["RSI"],
-        line=dict(color="#8b5cf6", width=1.5),
-        fill="tozeroy",
-        fillcolor="rgba(139,92,246,0.08)",
-        name="RSI",
-    ))
-
-    # 과매수(70) / 과매도(30) 기준선
-    fig.add_hline(y=70, line_dash="dash", line_color="#ef4444", opacity=0.5,
-                  annotation_text="과매수 70", annotation_position="bottom right")
-    fig.add_hline(y=30, line_dash="dash", line_color="#22c55e", opacity=0.5,
-                  annotation_text="과매도 30", annotation_position="top right")
-
-    fig.update_layout(**CHART_LAYOUT, title="RSI", height=250)
-    fig.update_yaxes(range=[0, 100])
-    fig.update_xaxes(showgrid=False)
-    return fig
-
-
-def _create_volume_chart(df: pd.DataFrame) -> go.Figure:
-    """거래량 차트를 생성합니다."""
-    change = df["Close"].diff()
-    colors = ["#ef4444" if c < 0 else "#22c55e" for c in change]
-
-    fig = go.Figure()
-    fig.add_trace(go.Bar(
-        x=df.index, y=df["Volume"],
-        marker_color=colors, name="거래량",
-        opacity=0.7,
-    ))
-
-    fig.update_layout(**CHART_LAYOUT, title="거래량", height=250)
-    fig.update_xaxes(showgrid=False)
-    return fig
-
-
-def _create_investor_chart(inv_df: pd.DataFrame) -> go.Figure:
-    """외국인·기관 순매수 차트를 생성합니다."""
-    fig = go.Figure()
-
-    fig.add_trace(go.Bar(
-        x=inv_df["Date"], y=inv_df["외국인순매수"],
-        name="외국인",
-        marker_color="rgba(59,130,246,0.7)",
-    ))
-
-    fig.add_trace(go.Bar(
-        x=inv_df["Date"], y=inv_df["기관순매수"],
-        name="기관",
-        marker_color="rgba(249,115,22,0.7)",
-    ))
-
-    fig.update_layout(**CHART_LAYOUT, title="외국인 · 기관 순매수", height=250,
-                      barmode="group")
-    fig.update_xaxes(showgrid=False)
+    fig.update_yaxes(showgrid=True, gridcolor="#f0f0f0")
+    
     return fig
 
 
@@ -640,30 +620,17 @@ def _display_stock_info(code, name, metrics, news, ohlcv, investor):
     col_pbr.markdown(_render_metric_box("PBR", metrics["pbr"]), unsafe_allow_html=True)
     col_div.markdown(_render_metric_box("배당률", metrics["div"]), unsafe_allow_html=True)
 
-    # ── 기술 분석 차트 ──
+    # ── 통합 분석 차트 ──
     if not ohlcv.empty:
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown(
-            '<div class="search-title">📊 기술 분석 차트</div>',
+            '<div class="search-title">📈 통합 기술 분석 차트</div>',
             unsafe_allow_html=True,
         )
-
-        # MACD & RSI (2열)
-        col_macd, col_rsi = st.columns(2)
-        with col_macd:
-            st.plotly_chart(_create_macd_chart(ohlcv), use_container_width=True)
-        with col_rsi:
-            st.plotly_chart(_create_rsi_chart(ohlcv), use_container_width=True)
-
-        # 거래량 & 외국인/기관 (2열)
-        col_vol, col_inv = st.columns(2)
-        with col_vol:
-            st.plotly_chart(_create_volume_chart(ohlcv), use_container_width=True)
-        with col_inv:
-            if not investor.empty:
-                st.plotly_chart(_create_investor_chart(investor), use_container_width=True)
-            else:
-                st.info("외국인·기관 순매수 데이터를 가져올 수 없습니다.")
+        
+        # 통합 차트 렌더링
+        fig = _create_integrated_chart(ohlcv, investor)
+        st.plotly_chart(fig, use_container_width=True)
 
     # ── 관련 뉴스 ──
     st.markdown("<br><b>📰 관련 뉴스</b>", unsafe_allow_html=True)
