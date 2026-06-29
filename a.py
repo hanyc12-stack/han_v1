@@ -34,7 +34,7 @@ DEFAULT_HEADERS = {"User-Agent": USER_AGENT}
 # ─────────────────────────────────────────
 # CSS 스타일
 # ─────────────────────────────────────────
-st.markdown("""
+html_block("""
 <style>
 /* 전체 배경 */
 .stApp { background-color: #0e1117; color: #e0e0e0; }
@@ -117,7 +117,7 @@ div[aria-selected="true"]    { color: #fff !important; }
     color: #e0e0e0 !important;
 }
 </style>
-""", unsafe_allow_html=True)
+""")
 
 # ─────────────────────────────────────────
 # 데이터 헬퍼
@@ -161,6 +161,11 @@ def fmt_pnl(n):
     color = "up" if n > 0 else "down" if n < 0 else "flat"
     sign  = "+" if n > 0 else ""
     return f'<span class="{color}">{sign}{fmt_num(n)}원</span>'
+
+def html_block(content):
+    """들여쓰기를 제거하고 한 줄로 합쳐 st.markdown이 코드블록으로 잘못 인식하지 않도록 함"""
+    lines = [line.strip() for line in content.strip().splitlines()]
+    return st.markdown("".join(lines), unsafe_allow_html=True)
 
 # ─────────────────────────────────────────
 # 네이버 현재가 조회
@@ -521,7 +526,7 @@ def render_stock_detail(stock):
     info = fetch_naver_stock_info(code)
     c1, c2, c3 = st.columns(3)
     with c1:
-        st.markdown(f"""
+        html_block(f"""
         <div class="metric-card">
             <div class="metric-label">현재가</div>
             <div class="metric-value">{fmt_num(info['current_price'])}원</div>
@@ -529,22 +534,22 @@ def render_stock_detail(stock):
                 {'▲' if info['direction']=='up' else '▼' if info['direction']=='down' else '▶'}
                 {fmt_num(abs(info['diff']))}원 ({'+' if info['rate']>0 else ''}{info['rate']:.2f}%)
             </div>
-        </div>""", unsafe_allow_html=True)
+        </div>""")
     with c2:
-        st.markdown(f"""
+        html_block(f"""
         <div class="metric-card">
             <div class="metric-label">평균단가 / 보유수량</div>
             <div class="metric-value">{fmt_num(int(stock['avg_price']))}원</div>
             <div class="metric-sub flat">{fmt_num(stock['quantity'])}주</div>
-        </div>""", unsafe_allow_html=True)
+        </div>""")
     with c3:
         pnl_cls = "up" if stock['pnl'] > 0 else "down" if stock['pnl'] < 0 else "flat"
-        st.markdown(f"""
+        html_block(f"""
         <div class="metric-card">
             <div class="metric-label">평가손익</div>
             <div class="metric-value {pnl_cls}">{'+' if stock['pnl']>0 else ''}{fmt_num(stock['pnl'])}원</div>
             <div class="metric-sub {pnl_cls}">{'+' if stock['pnl_rate']>0 else ''}{stock['pnl_rate']:.2f}%</div>
-        </div>""", unsafe_allow_html=True)
+        </div>""")
 
     # 차트
     st.markdown("---")
@@ -580,11 +585,11 @@ def render_stock_detail(stock):
         news = fetch_news(code)
         if news:
             for n in news:
-                st.markdown(f"""
+                html_block(f"""
                 <div class="news-item">
                     <div class="news-title"><a href="{n['link']}" target="_blank" style="color:#90caf9;text-decoration:none">{n['title']}</a></div>
                     <div class="news-meta">{n['source']} · {n['date']}</div>
-                </div>""", unsafe_allow_html=True)
+                </div>""")
         else:
             st.info("뉴스가 없습니다.")
 
@@ -592,11 +597,11 @@ def render_stock_detail(stock):
         disclosures = fetch_disclosure(code)
         if disclosures:
             for d in disclosures:
-                st.markdown(f"""
+                html_block(f"""
                 <div class="news-item" style="border-left-color:#ff7043">
                     <div class="news-title"><a href="{d['link']}" target="_blank" style="color:#90caf9;text-decoration:none">{d['title']}</a></div>
                     <div class="news-meta">{d['source']} · {d['date']}</div>
-                </div>""", unsafe_allow_html=True)
+                </div>""")
         else:
             st.info("공시정보가 없습니다.")
 
@@ -604,11 +609,11 @@ def render_stock_detail(stock):
         reports = fetch_reports(code)
         if reports:
             for r in reports:
-                st.markdown(f"""
+                html_block(f"""
                 <div class="news-item" style="border-left-color:#66bb6a">
                     <div class="news-title"><a href="{r['link']}" target="_blank" style="color:#90caf9;text-decoration:none">{r['title']}</a></div>
                     <div class="news-meta">{r['source']} · {r['date']}</div>
-                </div>""", unsafe_allow_html=True)
+                </div>""")
         else:
             st.info("분석리포트가 없습니다.")
 
@@ -641,63 +646,66 @@ def render_portfolio():
     # 요약 카드
     c1, c2, c3, c4 = st.columns(4)
     with c1:
-        st.markdown(f"""
+        html_block(f"""
         <div class="metric-card">
             <div class="metric-label">총 매수금액</div>
             <div class="metric-value">{fmt_num(summary['total_invested'])}원</div>
-        </div>""", unsafe_allow_html=True)
+        </div>""")
     with c2:
-        st.markdown(f"""
+        html_block(f"""
         <div class="metric-card">
             <div class="metric-label">총 평가금액</div>
             <div class="metric-value">{fmt_num(summary['total_current'])}원</div>
-        </div>""", unsafe_allow_html=True)
+        </div>""")
     with c3:
         cls = "up" if summary['total_pnl'] > 0 else "down" if summary['total_pnl'] < 0 else "flat"
-        st.markdown(f"""
+        html_block(f"""
         <div class="metric-card">
             <div class="metric-label">총 평가손익</div>
             <div class="metric-value {cls}">{'+' if summary['total_pnl']>0 else ''}{fmt_num(summary['total_pnl'])}원</div>
-        </div>""", unsafe_allow_html=True)
+        </div>""")
     with c4:
         cls = "up" if summary['total_return'] > 0 else "down" if summary['total_return'] < 0 else "flat"
-        st.markdown(f"""
+        html_block(f"""
         <div class="metric-card">
             <div class="metric-label">수익률</div>
             <div class="metric-value {cls}">{'+' if summary['total_return']>0 else ''}{summary['total_return']:.2f}%</div>
-        </div>""", unsafe_allow_html=True)
+        </div>""")
 
     st.markdown("---")
     st.markdown('<div class="section-header">보유 종목</div>', unsafe_allow_html=True)
 
-    # 종목 테이블
-    header_html = """
-    <table class="data-table">
-    <thead><tr>
-        <th>증권사</th><th>종목명</th><th>현재가</th><th>등락</th>
-        <th>평균단가</th><th>수량</th><th>매수금액</th><th>평가금액</th>
-        <th>평가손익</th><th>수익률</th><th>비중</th>
-    </tr></thead><tbody>
-    """
-    rows_html = ""
+    # 종목 테이블 (한 줄 HTML로 생성 — 멀티라인 문자열은 마크다운이 코드블록으로 잘못 인식할 수 있음)
+    table_rows = ""
     for h in holdings:
         d_cls  = h["direction"]
         d_icon = "▲" if d_cls == "up" else "▼" if d_cls == "down" else "▶"
-        rows_html += f"""
-        <tr>
-            <td>{h['broker']}</td>
-            <td><b>{h['stock_name']}</b><br><small style='color:#666'>{h['stock_code']}</small></td>
-            <td>{fmt_num(h['current_price'])}</td>
-            <td class="{d_cls}">{d_icon} {fmt_num(abs(h['diff']))} ({'+' if h['rate']>0 else ''}{h['rate']:.2f}%)</td>
-            <td>{fmt_num(int(h['avg_price']))}</td>
-            <td>{fmt_num(h['quantity'])}</td>
-            <td>{fmt_num(h['buy_amount'])}</td>
-            <td>{fmt_num(h['current_amount'])}</td>
-            <td>{'+' if h['pnl']>0 else ''}{fmt_num(h['pnl'])}</td>
-            <td class="{'up' if h['pnl_rate']>0 else 'down' if h['pnl_rate']<0 else 'flat'}">{'+' if h['pnl_rate']>0 else ''}{h['pnl_rate']:.2f}%</td>
-            <td>{h['weight']:.1f}%</td>
-        </tr>"""
-    st.markdown(header_html + rows_html + "</tbody></table>", unsafe_allow_html=True)
+        pnl_cls = "up" if h['pnl_rate'] > 0 else "down" if h['pnl_rate'] < 0 else "flat"
+        table_rows += (
+            "<tr>"
+            f"<td>{h['broker']}</td>"
+            f"<td><b>{h['stock_name']}</b><br><small style='color:#666'>{h['stock_code']}</small></td>"
+            f"<td>{fmt_num(h['current_price'])}</td>"
+            f"<td class='{d_cls}'>{d_icon} {fmt_num(abs(h['diff']))} ({'+' if h['rate']>0 else ''}{h['rate']:.2f}%)</td>"
+            f"<td>{fmt_num(int(h['avg_price']))}</td>"
+            f"<td>{fmt_num(h['quantity'])}</td>"
+            f"<td>{fmt_num(h['buy_amount'])}</td>"
+            f"<td>{fmt_num(h['current_amount'])}</td>"
+            f"<td>{'+' if h['pnl']>0 else ''}{fmt_num(h['pnl'])}</td>"
+            f"<td class='{pnl_cls}'>{'+' if h['pnl_rate']>0 else ''}{h['pnl_rate']:.2f}%</td>"
+            f"<td>{h['weight']:.1f}%</td>"
+            "</tr>"
+        )
+
+    table_html = (
+        "<table class='data-table'><thead><tr>"
+        "<th>증권사</th><th>종목명</th><th>현재가</th><th>등락</th>"
+        "<th>평균단가</th><th>수량</th><th>매수금액</th><th>평가금액</th>"
+        "<th>평가손익</th><th>수익률</th><th>비중</th>"
+        "</tr></thead><tbody>" + table_rows + "</tbody></table>"
+    )
+
+    st.markdown(table_html, unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("**종목을 클릭하면 상세 정보를 볼 수 있습니다.**", unsafe_allow_html=True)
@@ -775,14 +783,14 @@ def render_trades():
         with st.container():
             c1, c2, c3 = st.columns([6, 1, 1])
             with c1:
-                st.markdown(f"""
+                html_block(f"""
                 <div class="news-item" style="border-left-color:{'#ef5350' if t['type']=='buy' else '#26a69a'}">
                     <div class="news-title">{type_label} &nbsp; <b>{t['stock_name']}</b> ({t['stock_code']}) &nbsp; [{t['broker']}]</div>
                     <div class="news-meta">
                         {t['date']} &nbsp;|&nbsp;
                         {fmt_num(t['price'])}원 × {fmt_num(t['quantity'])}주 &nbsp;=&nbsp; {amount}원
                     </div>
-                </div>""", unsafe_allow_html=True)
+                </div>""")
             with c2:
                 if st.button("✏️", key=f"edit_{t['id']}", help="수정"):
                     st.session_state.edit_trade_id = t["id"]
