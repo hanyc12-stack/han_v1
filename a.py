@@ -5,6 +5,7 @@ import html
 import requests
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 from datetime import datetime, timedelta
 from bs4 import BeautifulSoup
 import yfinance as yf
@@ -24,6 +25,42 @@ def html_block(content):
     """들여쓰기를 제거하고 한 줄로 합쳐 st.markdown이 코드블록으로 잘못 인식하지 않도록 함"""
     lines = [line.strip() for line in content.strip().splitlines()]
     st.markdown("".join(lines), unsafe_allow_html=True)
+
+def clickable_list(items, border_color="#3f51b5"):
+    """
+    Streamlit iframe sandbox를 우회해 제목 클릭 시 새 탭으로 여는 카드 목록.
+    items: [{"title":str, "link":str, "source":str, "date":str}, ...]
+    """
+    cards_html = ""
+    for item in items:
+        link  = item.get("link", "#")
+        title = item.get("title", "")
+        meta  = item.get("source", "")
+        if item.get("date"):
+            meta += f" · {item['date']}"
+        cards_html += f"""
+        <div style="background:#1e2130;border-radius:8px;padding:12px 16px;
+                    margin-bottom:8px;border-left:3px solid {border_color}">
+            <div style="font-size:14px;font-weight:600">
+                <a href="{link}" target="_blank" rel="noopener noreferrer"
+                   style="color:#90caf9;text-decoration:none">
+                    {title}
+                </a>
+            </div>
+            <div style="font-size:12px;color:#888;margin-top:4px">{meta}</div>
+        </div>"""
+
+    full_html = f"""<!DOCTYPE html>
+<html><head>
+<meta charset="utf-8">
+<style>
+  body {{ margin:0; padding:0; background:transparent; font-family: sans-serif; }}
+  a:hover {{ text-decoration:underline !important; }}
+</style>
+</head><body>{cards_html}</body></html>"""
+
+    height = len(items) * 74 + 10
+    components.html(full_html, height=height, scrolling=False)
 
 # ─────────────────────────────────────────
 # 상수
@@ -647,20 +684,10 @@ def render_stock_detail(stock):
     tab1, tab2, tab3, tab4 = st.tabs(["📰 뉴스", "📢 공시정보", "📊 분석리포트", "💹 재무정보"])
 
     with tab1:
+        # 뉴스: 제목 클릭 시 새 탭으로 열기 (components.html로 sandbox 우회)
         news = fetch_news(code)
         if news:
-            for n in news:
-                with st.container():
-                    col_txt, col_btn = st.columns([8, 2])
-                    with col_txt:
-                        html_block(f"""
-                        <div class="news-item" style="margin-bottom:4px">
-                            <div class="news-title" style="color:#e0e0e0">{n['title']}</div>
-                            <div class="news-meta">{n['source']} · {n['date']}</div>
-                        </div>""")
-                    with col_btn:
-                        if n.get('link'):
-                            st.link_button("열기 ↗", n['link'], use_container_width=True)
+            clickable_list(news, border_color="#3f51b5")
         else:
             st.info("뉴스가 없습니다.")
 
@@ -683,30 +710,19 @@ def render_stock_detail(stock):
             st.info("공시정보가 없습니다.")
 
     with tab3:
+        # 분석리포트: 제목 클릭 시 새 탭으로 열기 (components.html로 sandbox 우회)
         reports = fetch_reports(code)
         if reports:
-            # 외부 페이지 링크인지 여부로 헤더 표시 구분
             has_real = any(not r.get("is_external_page") for r in reports)
             if not has_real:
-                st.info(
-                    "Streamlit Cloud 환경에서는 증권사 리포트를 직접 불러올 수 없습니다. "
-                    "아래 링크에서 확인해 주세요."
-                )
-            for r in reports:
-                border_color = "#66bb6a" if not r.get("is_external_page") else "#ffa726"
-                with st.container():
-                    col_txt, col_btn = st.columns([8, 2])
-                    with col_txt:
-                        date_str = f" · {r['date']}" if r.get("date") else ""
-                        html_block(f"""
-                        <div class="news-item" style="border-left-color:{border_color};margin-bottom:4px">
-                            <div class="news-title" style="color:#e0e0e0">{r['title']}</div>
-                            <div class="news-meta">{r['source']}{date_str}</div>
-                        </div>""")
-                    with col_btn:
-                        if r.get("link"):
-                            label = "바로가기 ↗" if r.get("is_external_page") else "열기 ↗"
-                            st.link_button(label, r["link"], use_container_width=True)
+                st.info("Streamlit Cloud 환경에서는 증권사 리포트를 직접 불러올 수 없습니다. 아래 링크에서 확인해 주세요.")
+            # 실제 리포트와 외부 링크 색상 구분
+            real_reports   = [r for r in reports if not r.get("is_external_page")]
+            extern_reports = [r for r in reports if r.get("is_external_page")]
+            if real_reports:
+                clickable_list(real_reports, border_color="#66bb6a")
+            if extern_reports:
+                clickable_list(extern_reports, border_color="#ffa726")
         else:
             st.info("분석리포트가 없습니다.")
 
