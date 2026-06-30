@@ -471,10 +471,32 @@ def fetch_financials(code):
                         rows.append([row_name] + [clean(td.get_text()) for td in tds])
 
         if headers and rows:
-            df = pd.DataFrame(rows, columns=["항목"] + headers)
+            # 중복 컬럼명 처리: 같은 이름이 있으면 _2, _3 suffix 추가
+            all_cols = ["항목"] + headers
+            seen = {}
+            unique_cols = []
+            for col in all_cols:
+                if col in seen:
+                    seen[col] += 1
+                    unique_cols.append(f"{col}_{seen[col]}")
+                else:
+                    seen[col] = 1
+                    unique_cols.append(col)
+
+            # 행 길이가 컬럼 수와 맞지 않으면 맞춰줌
+            n_cols = len(unique_cols)
+            fixed_rows = []
+            for row in rows:
+                if len(row) < n_cols:
+                    row = row + [""] * (n_cols - len(row))
+                elif len(row) > n_cols:
+                    row = row[:n_cols]
+                fixed_rows.append(row)
+
+            df = pd.DataFrame(fixed_rows, columns=unique_cols)
             return df
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"[Financials] Error: {e}")
     return None
 
 # ─────────────────────────────────────────
