@@ -628,11 +628,17 @@ def render_stock_detail(stock):
         news = fetch_news(code)
         if news:
             for n in news:
-                html_block(f"""
-                <div class="news-item">
-                    <div class="news-title"><a href="{n['link']}" target="_blank" style="color:#90caf9;text-decoration:none">{n['title']}</a></div>
-                    <div class="news-meta">{n['source']} · {n['date']}</div>
-                </div>""")
+                with st.container():
+                    col_txt, col_btn = st.columns([8, 2])
+                    with col_txt:
+                        html_block(f"""
+                        <div class="news-item" style="margin-bottom:4px">
+                            <div class="news-title" style="color:#e0e0e0">{n['title']}</div>
+                            <div class="news-meta">{n['source']} · {n['date']}</div>
+                        </div>""")
+                    with col_btn:
+                        if n.get('link'):
+                            st.link_button("열기 ↗", n['link'], use_container_width=True)
         else:
             st.info("뉴스가 없습니다.")
 
@@ -640,11 +646,17 @@ def render_stock_detail(stock):
         disclosures = fetch_disclosure(code)
         if disclosures:
             for d in disclosures:
-                html_block(f"""
-                <div class="news-item" style="border-left-color:#ff7043">
-                    <div class="news-title"><a href="{d['link']}" target="_blank" style="color:#90caf9;text-decoration:none">{d['title']}</a></div>
-                    <div class="news-meta">{d['source']} · {d['date']}</div>
-                </div>""")
+                with st.container():
+                    col_txt, col_btn = st.columns([8, 2])
+                    with col_txt:
+                        html_block(f"""
+                        <div class="news-item" style="border-left-color:#ff7043;margin-bottom:4px">
+                            <div class="news-title" style="color:#e0e0e0">{d['title']}</div>
+                            <div class="news-meta">{d['source']} · {d['date']}</div>
+                        </div>""")
+                    with col_btn:
+                        if d.get('link'):
+                            st.link_button("열기 ↗", d['link'], use_container_width=True)
         else:
             st.info("공시정보가 없습니다.")
 
@@ -652,11 +664,17 @@ def render_stock_detail(stock):
         reports = fetch_reports(code)
         if reports:
             for r in reports:
-                html_block(f"""
-                <div class="news-item" style="border-left-color:#66bb6a">
-                    <div class="news-title"><a href="{r['link']}" target="_blank" style="color:#90caf9;text-decoration:none">{r['title']}</a></div>
-                    <div class="news-meta">{r['source']} · {r['date']}</div>
-                </div>""")
+                with st.container():
+                    col_txt, col_btn = st.columns([8, 2])
+                    with col_txt:
+                        html_block(f"""
+                        <div class="news-item" style="border-left-color:#66bb6a;margin-bottom:4px">
+                            <div class="news-title" style="color:#e0e0e0">{r['title']}</div>
+                            <div class="news-meta">{r['source']} · {r['date']}</div>
+                        </div>""")
+                    with col_btn:
+                        if r.get('link'):
+                            st.link_button("열기 ↗", r['link'], use_container_width=True)
         else:
             st.info("분석리포트가 없습니다.")
 
