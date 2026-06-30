@@ -436,10 +436,27 @@ def fetch_reports(code):
 def fetch_financials(code):
     url = f"https://finance.naver.com/item/main.naver?code={code}"
     try:
-        res     = requests.get(url, headers=DEFAULT_HEADERS, timeout=7)
-        raw_html = res.content.decode("cp949", "replace")
-        soup    = BeautifulSoup(raw_html, "html.parser")
-        cop     = soup.find("div", class_="cop_analysis")
+        res = requests.get(url, headers=DEFAULT_HEADERS, timeout=7)
+
+        # cp949로 먼저 시도, 실패 시 euc-kr → utf-8 순으로 fallback
+        raw_bytes = res.content
+        raw_html = None
+        for enc in ["cp949", "euc-kr", "utf-8"]:
+            try:
+                decoded = raw_bytes.decode(enc)
+                # 깨진 문자 없이 디코딩 성공했는지 확인
+                if "\ufffd" not in decoded:
+                    raw_html = decoded
+                    break
+            except (UnicodeDecodeError, LookupError):
+                continue
+        if raw_html is None:
+            # 어떤 인코딩도 완벽하지 않으면 cp949 errors=ignore 사용
+            raw_html = raw_bytes.decode("cp949", "ignore")
+
+        # BeautifulSoup에 from_encoding 지정으로 내부 재인코딩 방지
+        soup = BeautifulSoup(raw_bytes, "html.parser", from_encoding="cp949")
+        cop  = soup.find("div", class_="cop_analysis")
         if not cop:
             return None
         tbl = cop.find("table")
@@ -449,8 +466,11 @@ def fetch_financials(code):
         def clean(text):
             if not text:
                 return ""
-            return re.sub(r'\s+', ' ',
-                          text.replace("\xa0", " ").replace("\ufffd", "")).strip()
+            # nbsp, 대체문자, 제어문자 제거 후 공백 정리
+            text = text.replace("\xa0", " ").replace("\u3000", " ")
+            text = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", text)
+            text = re.sub(r"\s+", " ", text).strip()
+            return text
 
         thead, tbody = tbl.find("thead"), tbl.find("tbody")
         headers = []
