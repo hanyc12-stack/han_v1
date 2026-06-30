@@ -371,23 +371,50 @@ def fetch_disclosure(code):
 # ─────────────────────────────────────────
 @st.cache_data(ttl=300)
 def fetch_reports(code):
-    reports = []
-    for url in [
-        f"https://finance.naver.com/research/company_list.naver?searchType=itemCode&keyword={code}",
-        f"https://finance.naver.com/research/company_list.naver?keyword={code}&brokerCode=&searchType=itemCode&page=1",
-    ]:
-        if reports:
-            break
-        try:
-            res  = requests.get(url, headers=DEFAULT_HEADERS, timeout=7)
+    """
+    네이버/에프앤가이드 리서치 API는 Streamlit Cloud 서버 IP를 차단(403)합니다.
+    대신 각 리포트 제공 사이트로 바로 이동하는 외부 링크 목록을 반환합니다.
+    """
+    reports = [
+        {
+            "title":  "네이버 증권 분석리포트 전체 보기",
+            "link":   f"https://finance.naver.com/research/company_list.naver?searchType=itemCode&keyword={code}",
+            "source": "네이버 증권",
+            "date":   "",
+            "is_external_page": True,
+        },
+        {
+            "title":  "에프앤가이드 리포트 보기",
+            "link":   f"https://comp.fnguide.com/SVO2/ASP/SVD_Report.asp?pGB=1&gicode=A{code}",
+            "source": "에프앤가이드",
+            "date":   "",
+            "is_external_page": True,
+        },
+        {
+            "title":  "씽크풀 증권 리포트 보기",
+            "link":   f"https://www.thinkpool.com/stockResearch/stockcode/{code}",
+            "source": "씽크풀",
+            "date":   "",
+            "is_external_page": True,
+        },
+        {
+            "title":  "한경 컨센서스 리포트 보기",
+            "link":   f"https://consensus.hankyung.com/apps.analysis/analysis.list?secucd={code}",
+            "source": "한국경제",
+            "date":   "",
+            "is_external_page": True,
+        },
+    ]
+
+    # 네이버 리서치 직접 파싱 시도 (성공 시 실제 리포트 목록으로 대체)
+    try:
+        url = f"https://finance.naver.com/research/company_list.naver?searchType=itemCode&keyword={code}"
+        res = requests.get(url, headers=DEFAULT_HEADERS, timeout=7)
+        if res.status_code == 200:
             soup = BeautifulSoup(res.content.decode("cp949", "ignore"), "html.parser")
             table = (soup.find("table", class_="type_1")
-                     or soup.find("table", class_="type1")
-                     or soup.find("table", class_="research_list"))
-            if not table:
-                for tbl in soup.find_all("table"):
-                    if len(tbl.find_all("tr")) > 2:
-                        table = tbl; break
+                     or soup.find("table", class_="type1"))
+            parsed = []
             if table:
                 for r in table.find_all("tr"):
                     tds = r.find_all("td")
@@ -397,37 +424,32 @@ def fetch_reports(code):
                             href = title_a.get("href", "")
                             if href.startswith("/"):
                                 href = "https://finance.naver.com" + href
-                            elif not href.startswith("http"):
-                                href = "https://finance.naver.com/research/" + href
-                            reports.append({
+                            # PDF 직링크 추출 시도
+                            pdf_link = ""
+                            try:
+                                detail_res = requests.get(href, headers=DEFAULT_HEADERS, timeout=5)
+                                if detail_res.status_code == 200:
+                                    detail_soup = BeautifulSoup(
+                                        detail_res.content.decode("cp949", "ignore"), "html.parser"
+                                    )
+                                    pdf_a = detail_soup.find("a", href=lambda h: h and ".pdf" in h.lower())
+                                    if pdf_a:
+                                        pdf_link = pdf_a.get("href", "")
+                            except Exception:
+                                pass
+                            parsed.append({
                                 "title":  title_a.text.strip(),
-                                "link":   href,
+                                "link":   pdf_link if pdf_link else href,
                                 "source": tds[1].text.strip(),
                                 "date":   tds[-1].text.strip(),
+                                "is_external_page": False,
                             })
-        except Exception:
-            pass
+            if parsed:
+                return parsed[:6]
+    except Exception:
+        pass
 
-    if not reports:
-        try:
-            url2 = f"https://m.stock.naver.com/api/research/stock/{code}?pageSize=6"
-            res2 = requests.get(url2, headers=DEFAULT_HEADERS, timeout=7)
-            if res2.status_code == 200:
-                data2 = res2.json()
-                items = data2 if isinstance(data2, list) else data2.get("items", [])
-                for item in items[:6]:
-                    title = html.unescape(item.get("title", "") or item.get("reportTitle", ""))
-                    if title:
-                        reports.append({
-                            "title":  title,
-                            "link":   item.get("link", "") or item.get("url", ""),
-                            "source": item.get("officeName", "") or item.get("brokerName", ""),
-                            "date":   item.get("dt", "") or item.get("date", ""),
-                        })
-        except Exception:
-            pass
-
-    return reports[:6]
+    return reports
 
 # ─────────────────────────────────────────
 # 재무정보
@@ -663,18 +685,28 @@ def render_stock_detail(stock):
     with tab3:
         reports = fetch_reports(code)
         if reports:
+            # 외부 페이지 링크인지 여부로 헤더 표시 구분
+            has_real = any(not r.get("is_external_page") for r in reports)
+            if not has_real:
+                st.info(
+                    "Streamlit Cloud 환경에서는 증권사 리포트를 직접 불러올 수 없습니다. "
+                    "아래 링크에서 확인해 주세요."
+                )
             for r in reports:
+                border_color = "#66bb6a" if not r.get("is_external_page") else "#ffa726"
                 with st.container():
                     col_txt, col_btn = st.columns([8, 2])
                     with col_txt:
+                        date_str = f" · {r['date']}" if r.get("date") else ""
                         html_block(f"""
-                        <div class="news-item" style="border-left-color:#66bb6a;margin-bottom:4px">
+                        <div class="news-item" style="border-left-color:{border_color};margin-bottom:4px">
                             <div class="news-title" style="color:#e0e0e0">{r['title']}</div>
-                            <div class="news-meta">{r['source']} · {r['date']}</div>
+                            <div class="news-meta">{r['source']}{date_str}</div>
                         </div>""")
                     with col_btn:
-                        if r.get('link'):
-                            st.link_button("열기 ↗", r['link'], use_container_width=True)
+                        if r.get("link"):
+                            label = "바로가기 ↗" if r.get("is_external_page") else "열기 ↗"
+                            st.link_button(label, r["link"], use_container_width=True)
         else:
             st.info("분석리포트가 없습니다.")
 
