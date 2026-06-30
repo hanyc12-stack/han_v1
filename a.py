@@ -408,50 +408,24 @@ def fetch_disclosure(code):
 # ─────────────────────────────────────────
 @st.cache_data(ttl=300)
 def fetch_reports(code):
-    """
-    네이버/에프앤가이드 리서치 API는 Streamlit Cloud 서버 IP를 차단(403)합니다.
-    대신 각 리포트 제공 사이트로 바로 이동하는 외부 링크 목록을 반환합니다.
-    """
-    reports = [
-        {
-            "title":  "네이버 증권 분석리포트 전체 보기",
-            "link":   f"https://finance.naver.com/research/company_list.naver?searchType=itemCode&keyword={code}",
-            "source": "네이버 증권",
-            "date":   "",
-            "is_external_page": True,
-        },
-        {
-            "title":  "에프앤가이드 리포트 보기",
-            "link":   f"https://comp.fnguide.com/SVO2/ASP/SVD_Report.asp?pGB=1&gicode=A{code}",
-            "source": "에프앤가이드",
-            "date":   "",
-            "is_external_page": True,
-        },
-        {
-            "title":  "씽크풀 증권 리포트 보기",
-            "link":   f"https://www.thinkpool.com/stockResearch/stockcode/{code}",
-            "source": "씽크풀",
-            "date":   "",
-            "is_external_page": True,
-        },
-        {
-            "title":  "한경 컨센서스 리포트 보기",
-            "link":   f"https://consensus.hankyung.com/apps.analysis/analysis.list?secucd={code}",
-            "source": "한국경제",
-            "date":   "",
-            "is_external_page": True,
-        },
-    ]
+    reports = []
 
-    # 네이버 리서치 직접 파싱 시도 (성공 시 실제 리포트 목록으로 대체)
+    # 1차: 네이버 리서치 PC 페이지 파싱 (쿠키 포함)
     try:
+        session = requests.Session()
+        session.headers.update({
+            "User-Agent": USER_AGENT,
+            "Referer": "https://finance.naver.com/",
+            "Accept-Language": "ko-KR,ko;q=0.9",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        })
+        # 메인 페이지 먼저 접근해 쿠키 획득
+        session.get("https://finance.naver.com/", timeout=5)
         url = f"https://finance.naver.com/research/company_list.naver?searchType=itemCode&keyword={code}"
-        res = requests.get(url, headers=DEFAULT_HEADERS, timeout=7)
+        res = session.get(url, timeout=7)
         if res.status_code == 200:
             soup = BeautifulSoup(res.content.decode("cp949", "ignore"), "html.parser")
-            table = (soup.find("table", class_="type_1")
-                     or soup.find("table", class_="type1"))
-            parsed = []
+            table = soup.find("table", class_="type_1") or soup.find("table", class_="type1")
             if table:
                 for r in table.find_all("tr"):
                     tds = r.find_all("td")
@@ -461,32 +435,68 @@ def fetch_reports(code):
                             href = title_a.get("href", "")
                             if href.startswith("/"):
                                 href = "https://finance.naver.com" + href
-                            # PDF 직링크 추출 시도
-                            pdf_link = ""
-                            try:
-                                detail_res = requests.get(href, headers=DEFAULT_HEADERS, timeout=5)
-                                if detail_res.status_code == 200:
-                                    detail_soup = BeautifulSoup(
-                                        detail_res.content.decode("cp949", "ignore"), "html.parser"
-                                    )
-                                    pdf_a = detail_soup.find("a", href=lambda h: h and ".pdf" in h.lower())
-                                    if pdf_a:
-                                        pdf_link = pdf_a.get("href", "")
-                            except Exception:
-                                pass
-                            parsed.append({
+                            elif not href.startswith("http"):
+                                href = "https://finance.naver.com/research/" + href
+                            reports.append({
                                 "title":  title_a.text.strip(),
-                                "link":   pdf_link if pdf_link else href,
+                                "link":   href,
                                 "source": tds[1].text.strip(),
                                 "date":   tds[-1].text.strip(),
-                                "is_external_page": False,
                             })
-            if parsed:
-                return parsed[:6]
     except Exception:
         pass
 
-    return reports
+    # 2차: 네이버 모바일 리서치 API
+    if not reports:
+        try:
+            mobile_headers = {
+                "User-Agent": "Mozilla/5.0 (Linux; Android 11; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
+                "Referer": "https://m.stock.naver.com/",
+                "Accept": "application/json",
+            }
+            url2 = f"https://m.stock.naver.com/api/research/stock/{code}?pageSize=6"
+            res2 = requests.get(url2, headers=mobile_headers, timeout=7)
+            if res2.status_code == 200:
+                data2 = res2.json()
+                items = data2 if isinstance(data2, list) else data2.get("items", [])
+                for item in items[:6]:
+                    title = html.unescape(item.get("title", "") or item.get("reportTitle", ""))
+                    link  = item.get("link", "") or item.get("url", "")
+                    if not link:
+                        oid = item.get("officeId","")
+                        aid = item.get("articleId","")
+                        if oid and aid:
+                            link = f"https://n.news.naver.com/mnews/article/{oid}/{aid}"
+                    if title:
+                        reports.append({
+                            "title":  title,
+                            "link":   link,
+                            "source": item.get("officeName", "") or item.get("brokerName", ""),
+                            "date":   item.get("dt", "") or item.get("date", ""),
+                        })
+        except Exception:
+            pass
+
+    # 3차: 파싱 모두 실패 시 네이버 리서치 페이지 바로가기 링크 제공
+    if not reports:
+        reports = [
+            {
+                "title":  f"네이버 증권 분석리포트 바로가기 →",
+                "link":   f"https://finance.naver.com/research/company_list.naver?searchType=itemCode&keyword={code}",
+                "source": "네이버 증권",
+                "date":   "",
+                "is_fallback": True,
+            },
+            {
+                "title":  f"한경 컨센서스 리포트 바로가기 →",
+                "link":   f"https://consensus.hankyung.com/apps.analysis/analysis.list?secucd={code}",
+                "source": "한국경제",
+                "date":   "",
+                "is_fallback": True,
+            },
+        ]
+
+    return reports[:6]
 
 # ─────────────────────────────────────────
 # 재무정보
@@ -713,16 +723,12 @@ def render_stock_detail(stock):
         # 분석리포트: 제목 클릭 시 새 탭으로 열기 (components.html로 sandbox 우회)
         reports = fetch_reports(code)
         if reports:
-            has_real = any(not r.get("is_external_page") for r in reports)
-            if not has_real:
-                st.info("Streamlit Cloud 환경에서는 증권사 리포트를 직접 불러올 수 없습니다. 아래 링크에서 확인해 주세요.")
-            # 실제 리포트와 외부 링크 색상 구분
-            real_reports   = [r for r in reports if not r.get("is_external_page")]
-            extern_reports = [r for r in reports if r.get("is_external_page")]
-            if real_reports:
-                clickable_list(real_reports, border_color="#66bb6a")
-            if extern_reports:
-                clickable_list(extern_reports, border_color="#ffa726")
+            is_fallback = all(r.get("is_fallback") for r in reports)
+            if is_fallback:
+                st.warning("증권사 서버 접근이 제한되어 리포트 목록을 가져올 수 없습니다. 아래 링크에서 직접 확인해 주세요.")
+                clickable_list(reports, border_color="#ffa726")
+            else:
+                clickable_list(reports, border_color="#66bb6a")
         else:
             st.info("분석리포트가 없습니다.")
 
