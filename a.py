@@ -20,6 +20,11 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+def html_block(content):
+    """들여쓰기를 제거하고 한 줄로 합쳐 st.markdown이 코드블록으로 잘못 인식하지 않도록 함"""
+    lines = [line.strip() for line in content.strip().splitlines()]
+    st.markdown("".join(lines), unsafe_allow_html=True)
+
 # ─────────────────────────────────────────
 # 상수
 # ─────────────────────────────────────────
@@ -34,7 +39,7 @@ DEFAULT_HEADERS = {"User-Agent": USER_AGENT}
 # ─────────────────────────────────────────
 # CSS 스타일
 # ─────────────────────────────────────────
-html_block("""
+st.markdown("""
 <style>
 /* 전체 배경 */
 .stApp { background-color: #0e1117; color: #e0e0e0; }
@@ -117,7 +122,7 @@ div[aria-selected="true"]    { color: #fff !important; }
     color: #e0e0e0 !important;
 }
 </style>
-""")
+""", unsafe_allow_html=True)
 
 # ─────────────────────────────────────────
 # 데이터 헬퍼
@@ -162,10 +167,6 @@ def fmt_pnl(n):
     sign  = "+" if n > 0 else ""
     return f'<span class="{color}">{sign}{fmt_num(n)}원</span>'
 
-def html_block(content):
-    """들여쓰기를 제거하고 한 줄로 합쳐 st.markdown이 코드블록으로 잘못 인식하지 않도록 함"""
-    lines = [line.strip() for line in content.strip().splitlines()]
-    return st.markdown("".join(lines), unsafe_allow_html=True)
 
 # ─────────────────────────────────────────
 # 네이버 현재가 조회
